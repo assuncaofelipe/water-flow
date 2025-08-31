@@ -1,4 +1,4 @@
-package home.felipe.myapplication.ui.theme
+package home.felipe.water.pocket.analysis.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

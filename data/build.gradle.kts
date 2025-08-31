@@ -1,26 +1,20 @@
 plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
-    id("com.android.application")
+    id("com.android.library")
     kotlin("android")
     kotlin("kapt")
     alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
 android {
-    namespace = "home.felipe.water.pocket.analysis"
+    namespace = "home.felipe.data"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "home.felipe.water.pocket.analysis"
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
     }
 
     buildTypes {
@@ -39,17 +33,9 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
 }
 
 dependencies {
-    coreLibraryDesugaring(libs.android.desugar)
-
-    implementation(project(":data"))
     implementation(project(":domain"))
 
     // Core / Lifecycle / Activity
@@ -65,13 +51,15 @@ dependencies {
     implementation(libs.androidx.material3)
     debugImplementation(libs.androidx.ui.tooling)
 
-    // Room
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+
+    coreLibraryDesugaring(libs.android.desugar)
+
+    // room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
-
-    // Navigation Compose
-    implementation(libs.androidx.navigation.compose)
 
     // Hilt (runtime + compiler)
     implementation(libs.hilt.android)
