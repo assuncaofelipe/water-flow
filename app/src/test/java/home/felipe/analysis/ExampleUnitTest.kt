@@ -1,4 +1,4 @@
-package home.felipe.myapplication
+package home.felipe.analysis
 
 import org.junit.Test
 

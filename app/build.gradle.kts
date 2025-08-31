@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "home.felipe.myapplication"
+    namespace = "home.felipe.water.pocket.analysis"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "home.felipe.myapplication"
+        applicationId = "home.felipe.water.pocket.analysis"
         minSdk = 29
         targetSdk = 34
         versionCode = 1

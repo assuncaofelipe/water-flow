@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "Water Pocket Analysis"
 include(":app")
 include(":data")
 include(":domain")
