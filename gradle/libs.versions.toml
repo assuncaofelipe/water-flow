@@ -1,36 +1,38 @@
 [versions]
-agp = "8.5.2"
-kotlin = "2.0.0"
+agp = "8.6.1"
+kotlin = "2.1.10"
 coroutines = "1.8.1"
 
 # libraries androidx
-coreKtx = "1.3.2"
-lifecycleRuntimeKtx = "2.8.4"
-activityCompose = "1.9.2"
-composeBom = "2024.05.00"
+coreKtx = "1.17.0"
+lifecycleRuntimeKtx = "2.9.3"
+activityCompose = "1.10.1"
+composeBom = "2025.08.01"
 
 # tests
+
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 mockk = "1.13.12"
-dagger = "2.52"
-gson = "2.10.1"
 room = "2.7.2"
 
 # compose
-navigationCompose = "2.7.7"
+navigationCompose = "2.9.3"
 
 # outros
 ksp = "2.0.0-1.0.21"
+dagger = "2.52"
+gson = "2.10.1"
 hilt = "2.52"
+hiltNavigationCompose = "1.2.0"
 serialization = "1.7.3"
 tflite = "2.14.0"
 csv = "1.9.3"
 vico = "1.14.0"
 appcompat = "1.7.1"
 material = "1.12.0"
-material3 = "1.2.0"
+material3 = "1.3.2"
 android-desugar = "2.1.5"
 
 [plugins]
@@ -38,6 +40,8 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 jetbrains-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" } # ✅ ADD THIS LINE
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -81,6 +85,7 @@ vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 # Testes
 junit = { group = "junit", name = "junit", version.ref = "junit" }

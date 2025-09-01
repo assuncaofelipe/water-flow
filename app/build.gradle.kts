@@ -4,11 +4,12 @@ plugins {
     kotlin("android")
     kotlin("kapt")
     alias(libs.plugins.jetbrains.kotlin.compose)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
     namespace = "home.felipe.water.pocket.analysis"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "home.felipe.water.pocket.analysis"
@@ -74,6 +75,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     // Hilt (runtime + compiler)
+    implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 

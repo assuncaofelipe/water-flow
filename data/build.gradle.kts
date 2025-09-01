@@ -4,6 +4,7 @@ plugins {
     kotlin("android")
     kotlin("kapt")
     alias(libs.plugins.jetbrains.kotlin.compose)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -61,7 +62,11 @@ dependencies {
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
 
+    // Navigation Compose
+    implementation(libs.androidx.navigation.compose)
+
     // Hilt (runtime + compiler)
+    implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 

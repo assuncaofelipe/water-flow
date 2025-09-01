@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
+    alias(libs.plugins.hilt.android)
     id("com.android.library")
     kotlin("android")
     kotlin("kapt")
@@ -47,6 +48,14 @@ dependencies {
     implementation(libs.dagger)
     implementation(libs.gson)
     kapt(libs.dagger.compiler)
+
+    // Navigation Compose
+    implementation(libs.androidx.navigation.compose)
+
+    // Hilt (runtime + compiler)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
 
     coreLibraryDesugaring(libs.android.desugar)
 
