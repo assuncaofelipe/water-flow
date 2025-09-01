@@ -1,19 +1,15 @@
 plugins {
-    alias(libs.plugins.jetbrains.kotlin.serialization)
-    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.jetbrains.kotlin.android)
     id("com.android.library")
-    kotlin("android")
     kotlin("kapt")
 }
 
 android {
     namespace = "home.felipe.domain"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
-        targetSdk = 34
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -36,36 +32,21 @@ android {
 }
 
 dependencies {
-
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-
     implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.android)
 
-    implementation(libs.kotlin.reflect)
+    // Dagger (se usar no domínio)
     implementation(libs.dagger)
-    implementation(libs.gson)
     kapt(libs.dagger.compiler)
+    // (ou ksp(libs.dagger.compiler) se migrar)
 
-    // Navigation Compose
-    implementation(libs.androidx.navigation.compose)
-
-    // Hilt (runtime + compiler)
-    implementation(libs.hilt.navigation.compose)
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
-
+    implementation(libs.gson)
     coreLibraryDesugaring(libs.android.desugar)
 
-    implementation(libs.gson)
-
-    // test
+    // Test
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
-    testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    kaptTest(libs.dagger.compiler)
 }

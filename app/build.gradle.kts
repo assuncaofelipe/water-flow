@@ -1,20 +1,19 @@
 plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.serialization)
-    id("com.android.application")
-    kotlin("android")
-    kotlin("kapt")
     alias(libs.plugins.jetbrains.kotlin.compose)
     alias(libs.plugins.hilt.android)
+    kotlin("kapt")
 }
 
 android {
     namespace = "home.felipe.water.pocket.analysis"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "home.felipe.water.pocket.analysis"
         minSdk = 29
-        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -33,6 +32,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -40,6 +40,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -53,10 +54,9 @@ dependencies {
     implementation(project(":data"))
     implementation(project(":domain"))
 
-    // Core / Lifecycle / Activity
+    // Core / Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
 
     // Compose (via BOM)
     implementation(platform(libs.androidx.compose.bom))
@@ -66,33 +66,28 @@ dependencies {
     implementation(libs.androidx.material3)
     debugImplementation(libs.androidx.ui.tooling)
 
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
 
-    // Navigation Compose
-    implementation(libs.androidx.navigation.compose)
-
-    // Hilt (runtime + compiler)
+    // Hilt
     implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    // (se migrar p/ KSP, troque por ksp(libs.hilt.compiler))
 
-    // GSON
+    // JSON / Coroutines
     implementation(libs.gson)
-
-    // Coroutines / JSON
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
-    // TensorFlow Lite
+    // TFLite / CSV / Charts
     implementation(libs.tensorflow.lite)
-
-    // CSV
     implementation(libs.kotlin.csv)
-
-    // Charts (Vico)
     implementation(libs.vico.core)
     implementation(libs.vico.compose)
 
