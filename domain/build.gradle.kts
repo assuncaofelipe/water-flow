@@ -50,6 +50,8 @@ dependencies {
 
     coreLibraryDesugaring(libs.android.desugar)
 
+    implementation(libs.gson)
+
     // test
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

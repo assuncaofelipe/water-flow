@@ -77,6 +77,9 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 
+    // GSON
+    implementation(libs.gson)
+
     // Coroutines / JSON
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

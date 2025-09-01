@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // Gson
+    implementation(libs.gson)
+
     // TensorFlow Lite
     implementation(libs.tensorflow.lite)
 
