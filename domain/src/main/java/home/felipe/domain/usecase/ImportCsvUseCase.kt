@@ -7,8 +7,8 @@ import javax.inject.Inject
 
 class ImportCsvUseCase @Inject constructor(
     private val repo: CsvRepository
-) : UseCase<List<WaterRecord>, ImportCsvParams> {
-    override suspend fun execute(params: ImportCsvParams): List<WaterRecord> {
-        return repo.readCsv(params)
+) : UseCase<Pair<String, List<WaterRecord>>, ImportCsvParams> {
+    override suspend fun execute(params: ImportCsvParams): Pair<String, List<WaterRecord>> {
+        return repo.readCsvFromUri(params.contentResolver, params.uri)
     }
 }

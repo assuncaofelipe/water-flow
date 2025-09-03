@@ -9,7 +9,6 @@ import javax.inject.Inject
 class GenerateReportUseCase @Inject constructor(
     private val repo: ReportRepository
 ) : UseCase<Pair<Uri, Uri>, GenerateReportParams> {
-
     override suspend fun execute(params: GenerateReportParams): Pair<Uri, Uri> {
         val rows = params.result.predictions.mapIndexed { i, y ->
             mapOf(

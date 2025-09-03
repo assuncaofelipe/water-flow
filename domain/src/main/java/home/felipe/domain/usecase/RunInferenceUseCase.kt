@@ -1,34 +1,59 @@
 package home.felipe.domain.usecase
 
+import home.felipe.domain.repository.LoggerRepository
 import home.felipe.domain.repository.TFLiteRepository
+import home.felipe.domain.vo.MapFeaturesParams
 import home.felipe.domain.vo.PredictionResult
 import home.felipe.domain.vo.RunInferenceParams
 import home.felipe.domain.vo.Stats
 import javax.inject.Inject
 
 class RunInferenceUseCase @Inject constructor(
-    private val tensorFlowLite: TFLiteRepository
+    private val tensorFlowLite: TFLiteRepository,
+    private val mapFeatures: MapFeaturesUseCase,
+    private val loggerRepository: LoggerRepository
 ) : UseCase<PredictionResult, RunInferenceParams> {
 
     override suspend fun execute(params: RunInferenceParams): PredictionResult {
-        val meta = tensorFlowLite.loadFeatureMeta(params.metaAssetName)
+        loggerRepository.d(TAG, "run: target=${params.targetName} records=${params.records.size}")
 
+        val meta = tensorFlowLite.loadFeatureMeta(params.metaAssetName)
         require(meta.target == params.targetName) {
-            "metadata não corresponde ao alvo."
+            val msg = "metadata mismatch (${meta.target} != ${params.targetName})"
+            loggerRepository.e(TAG, msg)
+            msg
         }
 
-        val preds = tensorFlowLite.runBatch(params.tensorFlowLiteAssetName, meta, params.records)
+        val x = mapFeatures.execute(
+            MapFeaturesParams(
+                records = params.records,
+                meta = meta,
+                headerMap = params.headerMap,
+                standardizeWithMeta = params.standardizeWithMeta
+            )
+        )
 
+        val preds = tensorFlowLite.runBatch(
+            tensorFlowLiteAssetName = params.tensorFlowLiteAssetName,
+            meta = meta,
+            input = x
+        )
+
+        val finite = preds.filter { it.isFinite() }
         val stats = Stats(
-            mean = preds.average().toFloat(),
-            min = preds.minOrNull() ?: Float.NaN,
-            max = preds.maxOrNull() ?: Float.NaN
+            mean = finite.takeIf { it.isNotEmpty() }?.average()?.toFloat() ?: Float.NaN,
+            min = finite.minOrNull() ?: Float.NaN,
+            max = finite.maxOrNull() ?: Float.NaN
         )
 
-        return PredictionResult(
-            target = params.targetName,
-            predictions = preds,
-            stats = stats
+        loggerRepository.d(
+            TAG,
+            "done: n=${preds.size} mean=${stats.mean} min=${stats.min} max=${stats.max}"
         )
+        return PredictionResult(params.targetName, preds, stats)
+    }
+
+    private companion object {
+        const val TAG = "RunInferenceUC"
     }
 }

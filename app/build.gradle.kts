@@ -34,12 +34,20 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
+
+    buildFeatures { compose = true }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.6.10"
+    }
+
+    androidResources { noCompress += "tflite" }
 
     packaging {
         resources {
@@ -63,11 +71,15 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+    implementation(libs.compose.material3)
     debugImplementation(libs.androidx.ui.tooling)
+    implementation(libs.lifecycle.runtime.compose)
 
+    implementation(libs.timber)
     // Navigation
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.activity.compose)
+    implementation(libs.documentfile)
 
     // Room
     implementation(libs.room.runtime)
@@ -78,7 +90,6 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
-    // (se migrar p/ KSP, troque por ksp(libs.hilt.compiler))
 
     // JSON / Coroutines
     implementation(libs.gson)
@@ -90,6 +101,14 @@ dependencies {
     implementation(libs.kotlin.csv)
     implementation(libs.vico.core)
     implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
+    implementation(libs.compose.foundation.layout)
+
+    // TFLite play services
+    implementation(libs.play.services.tflite.java)
+    // (opcionais)
+    implementation(libs.play.services.tflite.support)
+    // implementation(libs.play.services.tflite.gpu)
 
     // Testes
     testImplementation(libs.junit)

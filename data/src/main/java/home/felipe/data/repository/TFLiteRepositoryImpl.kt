@@ -1,12 +1,17 @@
 package home.felipe.data.repository
 
 import android.app.Application
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.tflite.client.TfLiteInitializationOptions
+import com.google.android.gms.tflite.java.TfLite
 import home.felipe.domain.json.GsonProvider.shared
 import home.felipe.domain.repository.TFLiteRepository
 import home.felipe.domain.vo.FeatureMeta
-import home.felipe.domain.vo.WaterRecord
 import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.InterpreterApi
+import timber.log.Timber
 import java.io.FileInputStream
+import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import javax.inject.Inject
 
@@ -14,46 +19,81 @@ class TFLiteRepositoryImpl @Inject constructor(
     private val app: Application,
 ) : TFLiteRepository {
 
+    private val initializeTask by lazy {
+        val opts = TfLiteInitializationOptions.builder().build()
+        TfLite.initialize(app, opts)
+    }
+
     override fun loadFeatureMeta(assetName: String): FeatureMeta {
-        val txt = app.assets.open(assetName).bufferedReader().use { it.readText() }
-        return shared.fromJson(txt, FeatureMeta::class.java)
+        Timber.d("Loading metadata $assetName - $assetName")
+        val json = app.assets.open(assetName).bufferedReader().use { it.readText() }
+        val meta = shared.fromJson(json, FeatureMeta::class.java)
+        Timber.d("Meta lida target ${meta.target} - ${meta.featuresOrder.size} features")
+        return meta
     }
 
     override fun runBatch(
         tensorFlowLiteAssetName: String,
         meta: FeatureMeta,
-        records: List<WaterRecord>
+        input: Array<FloatArray>
     ): List<Float> {
-        // quantidade de linhas (registros).
-        val recordCount = records.size
+        if (input.isEmpty()) {
+            Timber.d("runBatch called empty input - ${input.size}")
+            return emptyList()
+        }
+        val features = input.first().size
+        if (features != meta.featuresOrder.size) {
+            Timber.d("The size of divergent features $features - ${meta.featuresOrder.size}")
+        }
 
-        // número de features usadas.
-        val featureCount = meta.featuresOrder.size
+        val modelBuffer = mapModel(tensorFlowLiteAssetName)
+        Timber.d("Model mapped $tensorFlowLiteAssetName - $tensorFlowLiteAssetName")
 
-        // matriz de entrada [registros, features].
-        val inputMatrix = Array(recordCount) { FloatArray(featureCount) }
-        records.forEachIndexed { recordIndex, waterRecord ->
-            meta.featuresOrder.forEachIndexed { featureIndex, featureName ->
-                val value = waterRecord.values[featureName] ?: Float.NaN
-                inputMatrix[recordIndex][featureIndex] = value
+        try {
+            Tasks.await(initializeTask)
+            Timber.d("TfLite.initialize completed - $tensorFlowLiteAssetName")
+
+            val options = InterpreterApi.Options()
+                .setRuntime(InterpreterApi.Options.TfLiteRuntime.FROM_SYSTEM_ONLY)
+
+            val output = Array(input.size) { FloatArray(1) }
+            InterpreterApi.create(modelBuffer, options).use { interpreter ->
+                Timber.d("InterpreterApi pronto - N ${input.size} - K $features")
+                interpreter.run(input, output)
+            }
+
+            val ys = output.map { it[0] }
+            Timber.d("Inference (LiteRT) ok - ${ys.size}")
+            return ys
+        } catch (t: Throwable) {
+            Timber.d("Failed LiteRT - ${t.localizedMessage}")
+        }
+
+        return runWithBundledInterpreter(modelBuffer, input)
+    }
+
+    private fun mapModel(assetPath: String): MappedByteBuffer {
+        app.assets.openFd(assetPath).use { fd ->
+            FileInputStream(fd.fileDescriptor).channel.use { ch ->
+                val mapped =
+                    ch.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
+                Timber.d("mapModel ok $assetPath - ${fd.declaredLength}")
+                return mapped
             }
         }
+    }
 
-        // matriz de saída [registros, 1].
-        val outputMatrix = Array(recordCount) { FloatArray(1) }
-
-        val mappedModel = app.assets.openFd(tensorFlowLiteAssetName).use { fd ->
-            FileInputStream(fd.fileDescriptor).channel.map(
-                FileChannel.MapMode.READ_ONLY,
-                fd.startOffset,
-                fd.declaredLength
-            )
+    private fun runWithBundledInterpreter(
+        model: MappedByteBuffer,
+        input: Array<FloatArray>
+    ): List<Float> {
+        val output = Array(input.size) { FloatArray(1) }
+        Interpreter(model).use { interpreter ->
+            Timber.d("Interpreter (bundled) pronto - N ${input.size}")
+            interpreter.run(input, output)
         }
-
-        val interpreter = Interpreter(mappedModel)
-        interpreter.run(inputMatrix, outputMatrix)
-        interpreter.close()
-
-        return outputMatrix.map { it[0] }
+        val ys = output.map { it[0] }
+        Timber.d("Inference (bundled) ok - ${ys.size}")
+        return ys
     }
 }
