@@ -2,6 +2,7 @@ package home.felipe.data.di
 
 import android.app.Application
 import android.content.Context
+import com.android.identity.flow.annotation.FlowState
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -73,4 +74,8 @@ object DataModule {
     fun provideReportRepo(app: Application): ReportRepository {
         return ReportRepositoryImpl(app)
     }
+
+    @Provides
+    @Singleton
+    fun provideFlowState() = FlowState()
 }

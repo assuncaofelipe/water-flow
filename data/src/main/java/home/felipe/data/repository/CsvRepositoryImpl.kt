@@ -11,46 +11,51 @@ import timber.log.Timber
 import javax.inject.Inject
 
 class CsvRepositoryImpl @Inject constructor() : CsvRepository {
+
     override suspend fun readCsvFromUri(
-        cr: ContentResolver,
+        contentResolver: ContentResolver,
         uri: Uri
     ): Pair<String, List<WaterRecord>> {
-        Timber.d("readCsvFromUri: $uri")
-        val display = getDisplayName(cr, uri) ?: "arquivo.csv"
+        Timber.d("readCsvFromUri uri=$uri")
+        val displayName = getDisplayName(contentResolver, uri) ?: "arquivo.csv"
 
-        val records = buildList {
-            cr.openInputStream(uri)?.use { ips ->
+        val records: List<WaterRecord> = buildList {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
                 val rows: List<Map<String, String>> = csvReader {
                     delimiter = ','
                     skipEmptyLine = true
-                }.readAllWithHeader(ips)
+                }.readAllWithHeader(inputStream)
 
                 for (row in rows) {
-                    val date =
-                        row.keys.firstOrNull { it.contains("date", ignoreCase = true) }?.let { k ->
-                            row[k]?.takeIf { it.isNotBlank() }
-                        }
-                    val values: Map<String, Float> = row.mapNotNull { (k, v) ->
-                        v?.replace(",", ".", false)
+                    val dateKey =
+                        row.keys.firstOrNull { key -> key.contains("date", ignoreCase = true) }
+                    val dateValue =
+                        dateKey?.let { key -> row[key] }?.takeIf { value -> !value.isNullOrBlank() }
+
+                    val numericValues: Map<String, Float> = row.mapNotNull { (key, value) ->
+                        value
+                            ?.replace(",", ".", ignoreCase = false)
                             ?.trim()
-                            ?.takeIf { it.isNotEmpty() }
+                            ?.takeIf { cleaned -> cleaned.isNotEmpty() }
                             ?.toFloatOrNull()
-                            ?.let { k to it }
+                            ?.let { number -> key to number }
                     }.toMap()
-                    add(WaterRecord(date = date, values = values))
+
+                    add(WaterRecord(date = dateValue, values = numericValues))
                 }
             }
         }
 
-        return display to records
+        Timber.d("CSV lido: nome=$displayName linhas=${records.size}")
+        return displayName to records
     }
 
-    private fun getDisplayName(cr: ContentResolver, uri: Uri): String? {
+    private fun getDisplayName(contentResolver: ContentResolver, uri: Uri): String? {
         var name: String? = null
-        val cursor: Cursor? = cr.query(uri, null, null, null, null)
-        cursor?.use {
-            val idx = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (idx >= 0 && it.moveToFirst()) name = it.getString(idx)
+        val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)
+        cursor?.use { c ->
+            val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && c.moveToFirst()) name = c.getString(idx)
         }
         return name
     }

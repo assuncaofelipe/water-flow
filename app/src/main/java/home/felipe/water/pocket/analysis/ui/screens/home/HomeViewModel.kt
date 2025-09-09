@@ -5,97 +5,164 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import home.felipe.domain.repository.AnalysisRepository
 import home.felipe.domain.repository.CsvRepository
-import home.felipe.domain.vo.AnalysisSession
+import home.felipe.domain.repository.TFLiteRepository
+import home.felipe.domain.vo.FeatureMeta
+import home.felipe.water.pocket.analysis.FlowState
 import home.felipe.water.pocket.analysis.ui.models.RecentFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.util.UUID
+import java.text.Normalizer
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val app: Application,
     private val csvRepository: CsvRepository,
-    private val analysisRepo: AnalysisRepository
+    private val tflite: TFLiteRepository,
+    private val flow: FlowState
 ) : ViewModel() {
 
+    private val ioDispatchers = Job() + Dispatchers.Default
     private val _ui = MutableStateFlow(HomeUiState())
     val ui: StateFlow<HomeUiState> = _ui
 
-    fun onImportCsvUris(
-        uris: List<Uri>,
-        onNavigateToPreview: (String) -> Unit
-    ) {
-        // Inicie no Main; faça trabalhos pesados com withContext(IO/Default)
+    fun onImportCsvUris(uris: List<Uri>, onDone: (() -> Unit)? = null) {
         viewModelScope.launch {
+            _ui.emit(_ui.value.copy(loading = true, error = null))
             try {
-                _ui.emit(_ui.value.copy(loading = true, error = null))
+                val selectedUri = uris.first()
+                Timber.d("URI selected: $selectedUri")
 
-                val selected = uris.first()
-                Timber.d("URI selecionado: $selected")
-
-                // I/O: ler CSV
-                val (fileName, records) = withContext(Dispatchers.IO) {
-                    csvRepository.readCsvFromUri(app.contentResolver, selected)
+                // 1) Read CSV (IO)
+                val (fileName, records) = withContext(ioDispatchers) {
+                    csvRepository.readCsvFromUri(app.contentResolver, selectedUri)
                 }
-                Timber.d("CSV lido: $fileName - ${records.size} linhas")
+                Timber.d("CSV read: name=$fileName rows=${records.size}")
 
-                val dates = records.map { it.date }
-                val sid = UUID.randomUUID().toString()
+                flow.fileName = fileName
+                flow.records = records
+                flow.dates = records.map { it.date }
 
-                // Persistência leve (pode ser Default)
-                withContext(Dispatchers.Default) {
-                    analysisRepo.create(
-                        AnalysisSession(
-                            id = sid,
-                            fileName = fileName,
-                            records = records,
-                            dates = dates
-                        )
-                    )
+                // Union of numeric headers across all rows
+                val csvHeaders: Set<String> = records.asSequence()
+                    .flatMap { it.values.keys.asSequence() }
+                    .toSet()
+                Timber.d("Headers(${csvHeaders.size}): ${csvHeaders.joinToString()}")
+
+                // Build normalized index (matches Python cleaner)
+                val normIndex: Map<String, String> =
+                    csvHeaders.associateBy { normalizeHeaderLikePython(it) }
+
+                // 2) List metadata targets available in assets
+                val metaTargets: List<String> = withContext(ioDispatchers) {
+                    app.assets.list("metadata")
+                        ?.filter { it.endsWith(".json", ignoreCase = true) }
+                        ?.map { it.removeSuffix(".json") }
+                        .orEmpty()
                 }
-                Timber.d("Sessão criada: $sid")
+                Timber.d("Meta targets found: ${metaTargets.joinToString()}")
 
-                // Atualiza 'Recentes' (estamos no Main)
-                val headersUnion =
-                    records.asSequence().flatMap { it.values.keys.asSequence() }.toSet().toList()
-                val rf = RecentFile(name = fileName, rows = records.size, cols = headersUnion.size)
+                // 3) Build mappings for every target (NO gate)
+                val builtTargets = mutableListOf<String>()
+                val builtMaps = mutableMapOf<String, Map<String, String>>()
+
+                withContext(ioDispatchers) {
+                    metaTargets.forEach { targetName ->
+                        val meta = runCatching {
+                            tflite.loadFeatureMeta("metadata/$targetName.json")
+                        }.onFailure { e ->
+                            Timber.e(e, "Failed to load metadata for target=$targetName")
+                        }.getOrNull() ?: return@forEach
+
+                        val (mapping, matched) = mapTarget(meta, csvHeaders, normIndex)
+
+                        // Log coverage + small sample of mapping
+                        val sample = mapping.entries.take(4)
+                            .joinToString { "${it.key}→${it.value.ifEmpty { "(miss)" }}" }
+                        Timber.d("Target $targetName coverage=$matched/${meta.features_order.size} sample=[$sample]")
+
+                        builtTargets += targetName // always include
+                        builtMaps[targetName] = mapping
+                    }
+                }
+
+                flow.targetsAvailable = builtTargets.sorted()
+                flow.selectedTargets = flow.targetsAvailable
+                flow.headerMapsByTarget.clear()
+                flow.headerMapsByTarget.putAll(builtMaps)
+
+                Timber.d("Compatible targets (no gate): ${flow.targetsAvailable.joinToString()}")
+
+                // 4) Update recents + finish
+                val rf = RecentFile(name = fileName, rows = records.size, cols = csvHeaders.size)
                 _ui.emit(
-                    _ui.value.copy(
+                    HomeUiState(
                         recents = listOf(rf) + _ui.value.recents.take(9),
-                        loading = false
+                        loading = false,
+                        error = null
                     )
                 )
-
-                withContext(Dispatchers.Main) {
-                    Timber.d("Navigate -> Preview sid=$sid")
-                    onNavigateToPreview(sid)
-                }
+                onDone?.invoke()
             } catch (t: Throwable) {
-                Timber.d("Falha onImportCsvUris: ${t.message}")
-                _ui.emit(_ui.value.copy(loading = false, error = t.message ?: "Falha ao importar"))
+                Timber.e(t, "Error in onImportCsvUris")
+                _ui.emit(_ui.value.copy(loading = false, error = t.message ?: "Import failed"))
             }
         }
     }
 
-    fun onOpenRecent(
-        rf: RecentFile,
-        onNavigateToPreview: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            // gere/recupere o sid (faça I/O/Default se necessário com withContext)
-            val sid = UUID.randomUUID().toString()
-            Timber.d("Open recent '${rf.name}' -> sid=$sid")
+    fun onOpenRecent(recentFile: RecentFile, onDone: (() -> Unit)? = null) {
+        viewModelScope.launch { onDone?.invoke() }
+    }
 
-            withContext(Dispatchers.Main) {
-                onNavigateToPreview(sid)
+    /** === Helpers === */
+
+    // Same normalization as the Python cleaner (µ→u, NFKD, E.coli, collapse spaces).
+    private fun normalizeHeaderLikePython(text: String): String {
+        var x = text
+        x = x.replace("µ", "u")
+            .replace("μ", "u")
+            .replace("°", "")
+            .replace("º", "")
+            .replace("–", "-")
+            .replace("—", "-")
+            .replace("×", "x")
+        x = Normalizer.normalize(x, Normalizer.Form.NFKD)
+        x = x.replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+        x = x.replace(Regex("\\bE\\s*\\.?\\s*coli\\b", RegexOption.IGNORE_CASE), "E.coli")
+        x = x.replace("\\s+".toRegex(), " ").trim()
+        return x
+    }
+
+    // Build a mapping for a single target using exact match + normalized fallback
+    private fun mapTarget(
+        meta: FeatureMeta,
+        csvHeaders: Set<String>,
+        normIndex: Map<String, String>
+    ): Pair<Map<String, String>, Int> {
+        val mapping = mutableMapOf<String, String>()
+        var matched = 0
+
+        meta.features_order.forEach { canonical ->
+            val pref = meta.csvHeaderMap?.get(canonical)
+
+            // (1) exact
+            var chosen: String? = if (pref != null && csvHeaders.contains(pref)) pref else null
+
+            // (2) normalized fallback (if exact not found)
+            if (chosen == null && pref != null) {
+                val key = normalizeHeaderLikePython(pref)
+                chosen = normIndex[key]
             }
+
+            if (chosen != null) matched += 1
+            mapping[canonical] = chosen ?: ""
         }
+        return mapping to matched
     }
 }

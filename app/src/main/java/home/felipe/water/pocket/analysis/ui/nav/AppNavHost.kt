@@ -33,24 +33,24 @@ fun AppNavHost() {
                 HomeScreen(
                     state = state,
                     onImportCsvUris = { uris ->
-                        vm.onImportCsvUris(uris) { sid ->
-                            Timber.i("Navigate -> Result sid=$sid")
-                            nav.navigate(Route.Result.build(sid))
+                        vm.onImportCsvUris(uris) {
+                            Timber.i("Navigate -> Results")
+                            nav.navigate(Route.Result.path)
                         }
                     },
                     onOpenRecent = { rf ->
-                        vm.onOpenRecent(rf) { sid ->
-                            Timber.i("Open recent -> Result sid=$sid")
-                            nav.navigate(Route.Result.build(sid))
+                        vm.onOpenRecent(rf) {
+                            Timber.i("Open recent -> Results")
+                            nav.navigate(Route.Result.path)
                         }
                     }
                 )
             }
 
-            // PREVIEW
+            // PREVIEW (mantém sid)
             composable(Route.Preview.withArg) { backStack ->
                 val sid = backStack.arguments?.getString(Route.Preview.ARG_SID) ?: return@composable
-                Timber.i("Preview route sid=$sid")
+                Timber.i("Preview route sid=%s", sid)
 
                 val vm: PreviewModel = hiltViewModel()
                 val state by vm.ui.collectAsStateWithLifecycle()
@@ -61,21 +61,18 @@ fun AppNavHost() {
                     state = state,
                     onBack = { nav.popBackStack() },
                     onGenerateResults = {
-                        Timber.i("Preview -> Results sid=$sid")
-                        nav.navigate(Route.Result.build(sid))
+                        Timber.i("Preview -> Results sid=%s", sid)
+                        nav.navigate(Route.Result.path)
                     }
                 )
             }
 
-            // RESULTS
-            composable(Route.Result.withArg) { backStack ->
-                val sid = backStack.arguments?.getString(Route.Result.ARG_SID) ?: return@composable
-                Timber.i("Results route sid=$sid")
+            // RESULTS (sem sid; VM inicia sozinho)
+            composable(Route.Result.path) {
+                Timber.i("Results route")
 
                 val vm: ResultsViewModel = hiltViewModel()
                 val state by vm.ui.collectAsStateWithLifecycle()
-
-                LaunchedEffect(sid) { vm.runAll(sid) }
 
                 ResultsScreen(
                     state = state,

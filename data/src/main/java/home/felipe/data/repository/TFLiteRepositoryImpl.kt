@@ -1,14 +1,10 @@
 package home.felipe.data.repository
 
 import android.app.Application
-import com.google.android.gms.tasks.Tasks
-import com.google.android.gms.tflite.client.TfLiteInitializationOptions
-import com.google.android.gms.tflite.java.TfLite
 import home.felipe.domain.json.GsonProvider.shared
 import home.felipe.domain.repository.TFLiteRepository
 import home.felipe.domain.vo.FeatureMeta
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.InterpreterApi
 import timber.log.Timber
 import java.io.FileInputStream
 import java.nio.MappedByteBuffer
@@ -16,19 +12,16 @@ import java.nio.channels.FileChannel
 import javax.inject.Inject
 
 class TFLiteRepositoryImpl @Inject constructor(
-    private val app: Application,
+    private val app: Application
 ) : TFLiteRepository {
 
-    private val initializeTask by lazy {
-        val opts = TfLiteInitializationOptions.builder().build()
-        TfLite.initialize(app, opts)
-    }
-
     override fun loadFeatureMeta(assetName: String): FeatureMeta {
-        Timber.d("Loading metadata $assetName - $assetName")
+        Timber.d("Loading metadata: $assetName")
         val json = app.assets.open(assetName).bufferedReader().use { it.readText() }
         val meta = shared.fromJson(json, FeatureMeta::class.java)
-        Timber.d("Meta lida target ${meta.target} - ${meta.featuresOrder.size} features")
+        Timber.d(
+            "Metadata parsed: target=${meta.target} features=${meta.features_order.size} hasCsvHeaderMap=${meta.csvHeaderMap != null}"
+        )
         return meta
     }
 
@@ -38,38 +31,25 @@ class TFLiteRepositoryImpl @Inject constructor(
         input: Array<FloatArray>
     ): List<Float> {
         if (input.isEmpty()) {
-            Timber.d("runBatch called empty input - ${input.size}")
+            Timber.d("runBatch called with empty input")
             return emptyList()
         }
         val features = input.first().size
-        if (features != meta.featuresOrder.size) {
-            Timber.d("The size of divergent features $features - ${meta.featuresOrder.size}")
+        if (features != meta.features_order.size) {
+            Timber.w("Feature-size mismatch: input=$features meta=${meta.features_order.size}")
         }
 
         val modelBuffer = mapModel(tensorFlowLiteAssetName)
-        Timber.d("Model mapped $tensorFlowLiteAssetName - $tensorFlowLiteAssetName")
+        val output = Array(input.size) { FloatArray(1) }
 
-        try {
-            Tasks.await(initializeTask)
-            Timber.d("TfLite.initialize completed - $tensorFlowLiteAssetName")
-
-            val options = InterpreterApi.Options()
-                .setRuntime(InterpreterApi.Options.TfLiteRuntime.FROM_SYSTEM_ONLY)
-
-            val output = Array(input.size) { FloatArray(1) }
-            InterpreterApi.create(modelBuffer, options).use { interpreter ->
-                Timber.d("InterpreterApi pronto - N ${input.size} - K $features")
-                interpreter.run(input, output)
-            }
-
-            val ys = output.map { it[0] }
-            Timber.d("Inference (LiteRT) ok - ${ys.size}")
-            return ys
-        } catch (t: Throwable) {
-            Timber.d("Failed LiteRT - ${t.localizedMessage}")
+        Interpreter(modelBuffer).use { interpreter ->
+            Timber.d("Interpreter ready: N=${input.size} K=$features")
+            interpreter.run(input, output)
         }
 
-        return runWithBundledInterpreter(modelBuffer, input)
+        val ys = output.map { it[0] }
+        Timber.d("Inference OK: outputs=${ys.size}")
+        return ys
     }
 
     private fun mapModel(assetPath: String): MappedByteBuffer {
@@ -77,23 +57,9 @@ class TFLiteRepositoryImpl @Inject constructor(
             FileInputStream(fd.fileDescriptor).channel.use { ch ->
                 val mapped =
                     ch.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
-                Timber.d("mapModel ok $assetPath - ${fd.declaredLength}")
+                Timber.d("Model mapped: $assetPath bytes=${fd.declaredLength}")
                 return mapped
             }
         }
-    }
-
-    private fun runWithBundledInterpreter(
-        model: MappedByteBuffer,
-        input: Array<FloatArray>
-    ): List<Float> {
-        val output = Array(input.size) { FloatArray(1) }
-        Interpreter(model).use { interpreter ->
-            Timber.d("Interpreter (bundled) pronto - N ${input.size}")
-            interpreter.run(input, output)
-        }
-        val ys = output.map { it[0] }
-        Timber.d("Inference (bundled) ok - ${ys.size}")
-        return ys
     }
 }

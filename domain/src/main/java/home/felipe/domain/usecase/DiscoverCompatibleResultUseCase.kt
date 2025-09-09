@@ -33,20 +33,20 @@ class DiscoverCompatibleTargetsUseCase @Inject constructor(
                 .getOrNull() ?: continue
 
             val mapping = buildMapping.execute(
-                BuildHeaderMappingParams(meta.featuresOrder, params.csvHeaders)
+                BuildHeaderMappingParams(meta.features_order, params.csvHeaders)
             )
 
-            val matched = meta.featuresOrder.count { !mapping[it].isNullOrBlank() }
-            val needed = max(1, ceil(meta.featuresOrder.size * coverage).toInt())
-            val missing = meta.featuresOrder.filter { mapping[it].isNullOrBlank() }
+            val matched = meta.features_order.count { !mapping[it].isNullOrBlank() }
+            val needed = max(1, ceil(meta.features_order.size * coverage).toInt())
+            val missing = meta.features_order.filter { mapping[it].isNullOrBlank() }
 
             loggerRepository.d(
                 TAG,
-                "target=$name matched=$matched needed=$needed total=${meta.featuresOrder.size} missing=${missing.joinToString()}"
+                "target=$name matched=$matched needed=$needed total=${meta.features_order.size} missing=${missing.joinToString()}"
             )
 
             if (matched >= needed) {
-                val items = meta.featuresOrder.map { canonical ->
+                val items = meta.features_order.map { canonical ->
                     val h = mapping[canonical].orEmpty()
                     FeatureMapping(canonical, h, h.isBlank())
                 }

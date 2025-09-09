@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.hilt.android)
     id("com.android.library")
+    id("com.google.devtools.ksp")
     kotlin("kapt")
 }
 
@@ -40,13 +41,14 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.processor.annotations.jvm)
 
     coreLibraryDesugaring(libs.android.desugar)
 
     // Room (se este módulo persistir algo)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
     // (ou ksp(libs.room.compiler))
 
     // Hilt
@@ -67,10 +69,8 @@ dependencies {
     implementation(libs.vico.compose)
 
     // TFLite play services
-    implementation(libs.play.services.tflite.java)
-
-    // (opcionais)
-    implementation(libs.play.services.tflite.support)
+    // implementation(libs.play.services.tflite.java)
+    // implementation(libs.play.services.tflite.support)
     // implementation(libs.play.services.tflite.gpu)
 
     // Testes
