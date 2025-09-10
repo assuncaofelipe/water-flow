@@ -1,4 +1,4 @@
-package home.felipe.water.pocket.analysis.ui.theme
+package home.felipe.water.pocket.analysis.themes
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

@@ -1,19 +1,18 @@
 plugins {
+    alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.serialization)
+    alias(libs.plugins.hilt.android)
     id("com.android.library")
-    kotlin("android")
+    id("com.google.devtools.ksp")
     kotlin("kapt")
-    alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
 android {
     namespace = "home.felipe.data"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 29
-        targetSdk = 34
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -27,63 +26,61 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
+
+    sourceSets.getByName("main") {
+        assets.srcDirs("src/main/assets")
+    }
+
+    androidResources { noCompress += "tflite" }
 }
 
 dependencies {
     implementation(project(":domain"))
 
-    // Core / Lifecycle / Activity
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-
-    // Compose (via BOM)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    debugImplementation(libs.androidx.ui.tooling)
-
     implementation(libs.androidx.appcompat)
-    implementation(libs.material)
+    implementation(libs.processor.annotations.jvm)
 
     coreLibraryDesugaring(libs.android.desugar)
 
-    // room
+    // Room (se este módulo persistir algo)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    kapt(libs.room.compiler)
+    ksp(libs.room.compiler)
+    // (ou ksp(libs.room.compiler))
 
-    // Hilt (runtime + compiler)
+    // Hilt
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    // (ou ksp(libs.hilt.compiler))
+    implementation(libs.timber)
 
     // Coroutines / JSON
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.gson)
 
-    // TensorFlow Lite
+    // TFLite / CSV / Charts
     implementation(libs.tensorflow.lite)
-
-    // CSV
     implementation(libs.kotlin.csv)
-
-    // Charts (Vico)
     implementation(libs.vico.core)
     implementation(libs.vico.compose)
+
+    // TFLite play services
+    // implementation(libs.play.services.tflite.java)
+    // implementation(libs.play.services.tflite.support)
+    // implementation(libs.play.services.tflite.gpu)
 
     // Testes
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.test.manifest)
 }

@@ -1,4 +1,4 @@
-package home.felipe.water.pocket.analysis.ui.theme
+package home.felipe.water.pocket.analysis.themes
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
