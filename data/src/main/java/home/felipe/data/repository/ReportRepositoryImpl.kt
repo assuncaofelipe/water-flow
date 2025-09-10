@@ -8,6 +8,7 @@ import androidx.core.content.FileProvider
 import home.felipe.domain.repository.ReportRepository
 import home.felipe.domain.vo.ReportContent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -15,9 +16,10 @@ import javax.inject.Inject
 class ReportRepositoryImpl @Inject constructor(
     private val app: Application
 ) : ReportRepository {
+    private val ioDispatcher = Job() + Dispatchers.IO
 
     override suspend fun exportCsv(fileName: String, rows: List<Map<String, String>>): Uri {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             val file = File(app.cacheDir, fileName)
             file.printWriter().use { out ->
                 val headers = rows.firstOrNull()?.keys?.toList().orEmpty()
@@ -31,7 +33,7 @@ class ReportRepositoryImpl @Inject constructor(
     }
 
     override suspend fun exportPdf(fileName: String, content: ReportContent): Uri {
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             val file = File(app.cacheDir, fileName)
             val pdfDocument = PdfDocument()
             val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()

@@ -12,7 +12,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-class LocalDateTimeSerializer : JsonSerializer<LocalDateTime?>, JsonDeserializer<LocalDateTime?> {
+object LocalDateTimeSerializer : JsonSerializer<LocalDateTime?>, JsonDeserializer<LocalDateTime?> {
+    private const val DATE_TIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss"
+
     override fun serialize(
         src: LocalDateTime?,
         typeOfSrc: Type?,
@@ -27,20 +29,12 @@ class LocalDateTimeSerializer : JsonSerializer<LocalDateTime?>, JsonDeserializer
         typeOfT: Type?,
         context: JsonDeserializationContext?
     ): LocalDateTime? {
-        return if (json?.isJsonPrimitive == true) {
-            if (json.asJsonPrimitive.isString) {
-                val dtStr = json.asString
-
-                try {
-                    LocalDateTime.parse(dtStr, DateTimeFormatter.ofPattern(DATE_TIME_PATTERN))
-                } catch (ex: DateTimeParseException) {
-                    null
-                }
-            } else null
+        return if (json?.isJsonPrimitive == true && json.asJsonPrimitive.isString) {
+            try {
+                LocalDateTime.parse(json.asString, DateTimeFormatter.ofPattern(DATE_TIME_PATTERN))
+            } catch (ex: DateTimeParseException) {
+                null
+            }
         } else null
-    }
-
-    companion object {
-        private const val DATE_TIME_PATTERN = "yyyy-MM-dd'T'HH:mm:ss"
     }
 }

@@ -9,7 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-//
+import home.felipe.water.pocket.analysis.ui.models.QualityStatus
+
 @Composable
 fun QualityBadge(status: QualityStatus) {
     val (bg, fg, label) = when (status) {
@@ -23,5 +24,3 @@ fun QualityBadge(status: QualityStatus) {
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) { Text(label, color = fg, style = MaterialTheme.typography.labelLarge) }
 }
-
-enum class QualityStatus { OK, WARNING, CRITICAL }

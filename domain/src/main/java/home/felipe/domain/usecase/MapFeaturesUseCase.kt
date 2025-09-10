@@ -10,7 +10,7 @@ class MapFeaturesUseCase @Inject constructor(
 ) : UseCase<Array<FloatArray>, MapFeaturesParams> {
 
     override suspend fun execute(params: MapFeaturesParams): Array<FloatArray> {
-        val featureCount = params.meta.features_order.size
+        val featureCount = params.meta.featuresOrder.size
         val recordCount = params.records.size
         val canStd = params.standardizeWithMeta &&
           params.meta.means.size == featureCount &&
@@ -28,7 +28,7 @@ class MapFeaturesUseCase @Inject constructor(
         var filledByMedian = 0
 
         params.records.forEachIndexed { r, rec ->
-            params.meta.features_order.forEachIndexed { f, canonical ->
+            params.meta.featuresOrder.forEachIndexed { f, canonical ->
                 val key = params.headerMap?.get(canonical) ?: canonical
                 val raw = rec.values[key] ?: rec.values[canonical]
                 var value = raw ?: medians[min(f, medians.size - 1)].also { filledByMedian++ }

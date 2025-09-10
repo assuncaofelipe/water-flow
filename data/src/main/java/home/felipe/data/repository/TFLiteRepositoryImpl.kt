@@ -20,7 +20,7 @@ class TFLiteRepositoryImpl @Inject constructor(
         val json = app.assets.open(assetName).bufferedReader().use { it.readText() }
         val meta = shared.fromJson(json, FeatureMeta::class.java)
         Timber.d(
-            "Metadata parsed: target=${meta.target} features=${meta.features_order.size} hasCsvHeaderMap=${meta.csvHeaderMap != null}"
+            "Metadata parsed: target=${meta.target} features=${meta.featuresOrder.size} hasCsvHeaderMap=${meta.csvHeaderMap != null}"
         )
         return meta
     }
@@ -35,8 +35,8 @@ class TFLiteRepositoryImpl @Inject constructor(
             return emptyList()
         }
         val features = input.first().size
-        if (features != meta.features_order.size) {
-            Timber.w("Feature-size mismatch: input=$features meta=${meta.features_order.size}")
+        if (features != meta.featuresOrder.size) {
+            Timber.w("Feature-size mismatch: input=$features meta=${meta.featuresOrder.size}")
         }
 
         val modelBuffer = mapModel(tensorFlowLiteAssetName)

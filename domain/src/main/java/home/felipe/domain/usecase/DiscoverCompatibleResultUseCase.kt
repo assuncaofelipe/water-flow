@@ -11,7 +11,7 @@ import javax.inject.Inject
 import kotlin.math.ceil
 import kotlin.math.max
 
-class DiscoverCompatibleTargetsUseCase @Inject constructor(
+class DiscoverCompatibleResultUseCase @Inject constructor(
     private val tflite: TFLiteRepository,
     private val buildMapping: BuildHeaderMappingUseCase,
     private val loggerRepository: LoggerRepository
@@ -29,24 +29,26 @@ class DiscoverCompatibleTargetsUseCase @Inject constructor(
 
         for (name in params.targetNames) {
             val meta = runCatching { tflite.loadFeatureMeta("metadata/$name.json") }
-                .onFailure { loggerRepository.w(TAG, "meta load fail: $name") }
+                .onFailure { exception ->
+                    loggerRepository.e(TAG, "$exception - meta load fail: $name", exception)
+                }
                 .getOrNull() ?: continue
 
             val mapping = buildMapping.execute(
-                BuildHeaderMappingParams(meta.features_order, params.csvHeaders)
+                BuildHeaderMappingParams(meta.featuresOrder, params.csvHeaders)
             )
 
-            val matched = meta.features_order.count { !mapping[it].isNullOrBlank() }
-            val needed = max(1, ceil(meta.features_order.size * coverage).toInt())
-            val missing = meta.features_order.filter { mapping[it].isNullOrBlank() }
+            val matched = meta.featuresOrder.count { !mapping[it].isNullOrBlank() }
+            val needed = max(1, ceil(meta.featuresOrder.size * coverage).toInt())
+            val missing = meta.featuresOrder.filter { mapping[it].isNullOrBlank() }
 
             loggerRepository.d(
                 TAG,
-                "target=$name matched=$matched needed=$needed total=${meta.features_order.size} missing=${missing.joinToString()}"
+                "target=$name matched=$matched needed=$needed total=${meta.featuresOrder.size} missing=${missing.joinToString()}"
             )
 
             if (matched >= needed) {
-                val items = meta.features_order.map { canonical ->
+                val items = meta.featuresOrder.map { canonical ->
                     val h = mapping[canonical].orEmpty()
                     FeatureMapping(canonical, h, h.isBlank())
                 }

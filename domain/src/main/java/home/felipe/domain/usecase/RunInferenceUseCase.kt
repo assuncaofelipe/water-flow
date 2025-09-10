@@ -33,13 +33,13 @@ class RunInferenceUseCase @Inject constructor(
             )
         )
 
-        val preds = tensorFlowLite.runBatch(
+        val predictions = tensorFlowLite.runBatch(
             tensorFlowLiteAssetName = params.tensorFlowLiteAssetName,
             meta = meta,
             input = x
         )
 
-        val finite = preds.filter { it.isFinite() }
+        val finite = predictions.filter { it.isFinite() }
         val stats = Stats(
             mean = finite.takeIf { it.isNotEmpty() }?.average()?.toFloat() ?: Float.NaN,
             min = finite.minOrNull() ?: Float.NaN,
@@ -48,9 +48,9 @@ class RunInferenceUseCase @Inject constructor(
 
         loggerRepository.d(
             TAG,
-            "done: n=${preds.size} mean=${stats.mean} min=${stats.min} max=${stats.max}"
+            "done: n=${predictions.size} mean=${stats.mean} min=${stats.min} max=${stats.max}"
         )
-        return PredictionResult(params.targetName, preds, stats)
+        return PredictionResult(params.targetName, predictions, stats)
     }
 
     private companion object {

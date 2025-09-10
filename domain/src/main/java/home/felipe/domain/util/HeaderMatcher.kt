@@ -1,6 +1,5 @@
 package home.felipe.domain.util
 
-import java.text.Normalizer
 import java.util.Locale
 
 object HeaderMatcher {
@@ -8,17 +7,11 @@ object HeaderMatcher {
     /** Normalização pública para reutilizar nas VMs. */
     fun normalizeHeader(s: String): String {
         var x = s.lowercase(Locale.ROOT)
-        // Decompõe itálico/matemático/acentos: ex. 𝐸 -> e
-        x = Normalizer.normalize(x, Normalizer.Form.NFKD)
             .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
-        // μ/µ -> u (por segurança extra além do cleaner)
         x = x.replace("μ", "u").replace("µ", "u")
-        // Remove os parênteses, **mas mantém o conteúdo** (ex.: "%saturation" continua existindo)
         x = x.replace("(", "").replace(")", "")
-        // Remover hífens para unificar "5-day" e "5day"
         x = x.replace("-", "")
-        // Mantém apenas [a-z0-9], '%' e '.' (para e.coli). Tudo mais sai (espaço, '/' etc.)
-        x = x.replace("[^a-z0-9%\\.]".toRegex(), "")
+        x = x.replace("[^a-z0-9%.]".toRegex(), "")
         return x
     }
 
@@ -32,14 +25,12 @@ object HeaderMatcher {
     /** Tenta casar um único canônico com a melhor coluna do CSV. */
     fun matchSingle(canonical: String, csvHeaders: List<String>): String? {
         val c = normalizeHeader(canonical)
-        val preds = predicatesFor(c)
+        val predictions = predicatesFor(c)
 
-        // 1) Regras de sinônimos/unidades
         for (h in csvHeaders) {
             val n = normalizeHeader(h)
-            if (preds.any { it(n) } || n == c) return h
+            if (predictions.any { it(n) } || n == c) return h
         }
-        // 2) Aproximação startsWith (tolerante a pequenas diferenças)
         for (h in csvHeaders) {
             val n = normalizeHeader(h)
             if (n.startsWith(c) || c.startsWith(n)) return h
@@ -47,9 +38,7 @@ object HeaderMatcher {
         return null
     }
 
-    /** Regras específicas por canônico (espelha o dicionário do Python). */
     private fun predicatesFor(c: String): List<(String) -> Boolean> = when (c) {
-        // === Alvos ===
         "do" -> listOf { h -> h.contains("dissolvedoxygen") && !h.contains("%") }
         "dosat", "dosat", "do_sat" -> listOf { h ->
             h.contains("dissolvedoxygen") && (h.contains("%") || h.contains(
@@ -67,7 +56,6 @@ object HeaderMatcher {
         "turbidity" -> listOf { h -> h.contains("turbidity") || h.contains("turbidez") }
         "ph" -> listOf { h -> h == "ph" || h.startsWith("ph") }
 
-        // === Features auxiliares (CANONICAL do Python) ===
         "bod5" -> listOf { h ->
             h.contains("5daybiochemicaloxygendemand") || h.contains("biochemicaloxygendemand") || h.contains(
                 "bod"
