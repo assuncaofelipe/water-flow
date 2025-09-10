@@ -48,6 +48,10 @@ android {
         kotlinCompilerExtensionVersion = "1.6.10"
     }
 
+    sourceSets.getByName("main") {
+        assets.srcDirs("src/main/assets")
+    }
+
     androidResources { noCompress += "tflite" }
 
     packaging {
